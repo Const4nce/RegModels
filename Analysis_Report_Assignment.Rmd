@@ -1,0 +1,110 @@
+---
+output: pdf_document
+---
+#Regression Models Course Project 
+#Motor Trend Magazine - Data Analysis Report
+### Executive Summary
+
+Looking at the dataset of a collection of cars, the following report explores the relationships between a set of variables and miles per gallon (__MPG__), providing information focusing on two main aspects:
+
+__(a) Is an automatic or manual transmission better for MPG__
+
+__(b) Quantification of the MPG difference between automatic and manual transmissions__
+
+All the figures related to the exploratory data analysis are placed in the appendix of this document. First the difference between the automatic and manual transmission in terms of miles per gallon was examined. Results revealed a significant difference between the two groups with manual transmission to be related with an increase number of Miles/(US)gallon (Manual transmission:M=24.39, SD = 6.16; Automatic transmission:M = 17.15, SD = 3.83; p = 0.001374). Next, in order to define the significance of transmission type for MPG and quantify the difference between automatic and manual transmission, we fit and compare a range of regression models.Our analysis showed that cars with manual transmission are better in terms of miles per gallon compared to cars with automatic transmission (see also __figure 1__ in Appendix).Based on the results of a linear regression model with transmission type as the only explanatory variable, a change from manual to automatic transmission will increase Miles/(US)gallon by 7.245. However, transmission type explains only 34% of variance.A multivariate linear regression model that includes all the variables in our dataset on the other hand explains 78% of variance. Using the R "step" function, we determined the best variables to include in our model (optimal model by AIC).
+In addition to transmission variable ("am"), the best subset of cofounder variables explaining our MPG data include:
+
+__(a)__ Number of cylinders ("cyl")
+__(b)__ Gross horsepower ("hp") 
+__(c)__ Weight ("wt",lb/1000). 
+
+
+The proportion of variance explained by this model is 87% (see also figure 2). However, transmission type does not appear to be a good explanatory variable in our model, with its contribution not reaching significance, and explaining only about 12% of our mpg data. In contrast, number of cylinders, horsepower and weight appear to be significantly influential for the MPG data, and variables that should be consider over transmission for explaining MPG.Including or excluding the transmission type variable from the best-fit model did not show significant differences (p = 0.21), with the model explaining variance at about 86%.
+
+##1. Exploring the Dataset and Variable Transformations
+
+```{r, results = "hide"}
+data(mtcars); dim(mtcars); head(mtcars,5) 
+```
+```{r, results = FALSE}
+mtcars$cyl <- factor(mtcars$cyl);mtcars$vs <- factor(mtcars$vs); mtcars$gear <- factor(mtcars$gear); mtcars$carb <- factor(mtcars$carb); mtcars$am <- factor(mtcars$am)
+```
+
+##2. Statistical Inference
+Assuming that transmission data have a normal distribution, we perform a t-test. 
+
+```{r}
+t.test(mpg ~ am, data = mtcars)
+```
+```{r, results = "hide"}
+by(mtcars$mpg, mtcars$am, sd)
+```
+
+##3. Simple Linear Regression Model
+In this part we start exploring the relationships between the variables. We start by fitting a simple linear regression model, with MPG as the outcome, and AM as the predictor. This model will also serve as our base for comparisons with multivariable regression models.
+
+```{r}
+fit <- lm(mpg ~ am, data = mtcars); summary(fit)$coef; summary(fit)$r.squared
+```
+
+##4. Multivariable Linear Regression Model
+We fit a multivariable model including all variables in the dataset and mpg as the outcome. Using stepwise regression, we define the best subset of variables that fit our model. 
+```{r, results = "hide"}
+#Stepwise Regression
+multifit <- lm(mpg ~ ., data = mtcars)
+library(MASS)
+#stepwise model selection by exact AIC
+bestfit <- stepAIC(multifit, direction = "both") #results are not presented
+```
+
+```{r}
+summary(bestfit)$coef; summary(bestfit)$r.squared
+```
+
+The p-value associated with the transmission type (am) variable is way above our alpha level (p = 0.206), suggesting a non-significant contribution of the transmission type variable in our model.Details related to the calculation of relative importance for each predictor in our model are depicted in __figure 2__
+
+##5. Model Comparisons
+Comparisons between the base model and the best-fit model, in order to define the best model explaining mpg data.
+
+```{r, results = "hide"}
+anova(fit, bestfit)
+```
+Results suggest that the multivariable model is more accurate compared to the simple model.Considering the non-significant contribution of our transmission type, it would be wise to see also differences between our best-fit model and a new model that does not contain the transmission type variable
+```{r, results = "hide"}
+newfit <- lm(mpg ~ cyl + hp + wt, data = mtcars ); summary(newfit)
+anova(bestfit, newfit); anova(fit,newfit)
+```
+
+##6. Residuals and Diagnostics
+
+The related plots can be found in the Appendix (__figure 3__).As shown in the __Residuals vs Fitted plot__ data are randomly scattered on the indicating independence of the variable. The curve indicates a slight diversion from normality in the data. 
+
+##Appendix
+
+__figure 1__
+Boxplot showing the difference in MPG by transmission type (Automatic vs Manual)
+
+```{r}
+boxplot(mpg ~ am, data = mtcars, col = (c("green","blue")), ylab = "Miles Per Gallon", xlab = "Transmission Type", names = c("Automatic", "Manual"), main = "Comparison of MPG of Automatic vs Manual Transmission")
+```
+
+__figure 2__
+
+Plot showing the accountability of each predictor in our model
+
+```{r, message = FALSE, warning = FALSE, results = "hide"}
+library(relaimpo)
+calc.relimp(bestfit)
+```
+```{r}
+plot(calc.relimp(bestfit))
+```
+
+__figure 3__
+
+
+```{r}
+# diagnostic plots 
+layout(matrix(c(1,2,3,4),2,2)) 
+plot(bestfit)
+```
